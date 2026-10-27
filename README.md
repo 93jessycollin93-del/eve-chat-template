@@ -1,144 +1,92 @@
-# eve Chat Template
+# Sovereign Foundry
 
-A persisted Next.js chat template for [eve](https://beta.eve.dev), built with shadcn/ui, Tailwind CSS, Streamdown, Better Auth, Drizzle, Neon, and Upstash Redis.
+A local-first personal OS that runs in your browser. Your files, an encrypted vault, a journal, paper backups, and a private AI that runs on your own hardware. No account, no server, no cloud AI.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?project-name=eve-chat-template&repository-name=eve-chat-template&repository-url=https%3A%2F%2Fgithub.com%2Fvercel-labs%2Feve-chat-template%2Ftree%2Fmain&env=BETTER_AUTH_SECRET%2CNEXT_PUBLIC_VERCEL_APP_CLIENT_ID%2CVERCEL_APP_CLIENT_SECRET&envDescription=Neon+provisions+DATABASE_URL.+Upstash+Redis+provisions+rate-limit+storage.+Add+Better+Auth+secret+and+Sign+in+with+Vercel+credentials.+After+deploy%2C+run+production+migrations+from+the+setup+guide.&envLink=https%3A%2F%2Fgithub.com%2Fvercel-labs%2Feve-chat-template%2Fblob%2Fmain%2Fdocs%2Fsetup-and-deploy.md&products=%5B%7B%22type%22%3A%22integration%22%2C%22protocol%22%3A%22storage%22%2C%22productSlug%22%3A%22neon%22%2C%22integrationSlug%22%3A%22neon%22%7D%2C%7B%22type%22%3A%22integration%22%2C%22protocol%22%3A%22storage%22%2C%22productSlug%22%3A%22upstash-kv%22%2C%22integrationSlug%22%3A%22upstash%22%7D%5D)
+It started as a single Claude artifact, the "Cybernetic OS". This repo rebuilds it as a real, tested, installable app: every program does what it says, and nothing is simulated.
 
-## Quick Start
+## What each program actually does
 
-Two ways to get going:
+| Program | What it does | Built on |
+| --- | --- | --- |
+| **System32 Terminal** | A shell over your files: `ls cd cat echo > >> touch mkdir mv cp rm -r tree find grep wc du df sha256sum open history`, tab completion, and a y/n prompt before deleting | IndexedDB |
+| **Compression Engine** | Compress or decompress any text or file as gzip, zlib or raw deflate; shows the real ratio and verifies the round trip with SHA-256 | Compression Streams API |
+| **Foam Explorer** | Your storage drawn as bubbles: one per file, sized by its bytes; tap folders to zoom in | d3 circle packing |
+| **Singularity Viewer** | One SHA-256 fingerprint of every file and memory pod; detects changes, compares two devices, verifies backup files | WebCrypto |
+| **TheoryPad** | Text editor for any file, autosaves, picks up edits made in other windows or tabs | IndexedDB |
+| **Build Center** | The running version and commit, offline and update status, install to home screen, and the assets this page loaded | Service worker |
+| **Artifact Forge** | Keeps HTML artifacts and runs them in a sandbox that cannot read your files | Sandboxed iframe |
+| **Brutal/Beautiful Logger** | A journal where each entry pairs a hard truth with its reframe; saved as a file, exports to Markdown | `/Logs/brutal_beautiful.jsonl` |
+| **Secret Box Vault** | Encrypts files and notes with a passphrase; names are encrypted too; locks itself after 5 minutes idle | AES-256-GCM + PBKDF2 |
+| **Kernel Monitor** | Open windows as processes you can end, live frame rate and main-thread lag, memory and storage, and a button to make storage persistent | Performance + Storage APIs |
+| **Memory Map** | Where your bytes live; full JSON backup and restore with fingerprint check; Bonsai memory pods; restore paper backups by camera, photo or text | IndexedDB, QR |
+| **File Explorer** | Browse, import (text or binary), preview images, rename, delete, download, print small files as QR paper backups | IndexedDB |
+| **Bonsai.exe** | Chat with a model on your own computer through Ollama; streams tokens; saves each exchange as a memory pod and can read recent pods back | Ollama |
 
-- **One-click:** use the **Deploy with Vercel** button above to clone and provision storage, then run migrations (see [Setup and Deployment](docs/setup-and-deploy.md#one-click-deploy)).
-- **Local script:** clone the repo and run the setup script. It links the project, provisions Neon, registers the Sign in with Vercel OAuth app (email scope + callbacks), sets the environment variables through the Vercel API, pulls them locally, runs migrations, and can optionally set up the Notion connector. If OAuth app registration isn't available it falls back to a guided manual flow.
+### What changed from the original artifact
 
-```bash
-# Uses the linked project's team by default
-./scripts/setup.sh
+The artifact labelled some features `REAL` and others `SIMULATED`. Several `REAL` labels were not accurate either:
 
-# Or target a specific team (also accepts a bare team slug)
-./scripts/setup.sh --scope <team-slug>
-```
+- **The vault was not encrypted.** It unlocked with any password containing "sovereign" and stored everything in plain text. It now uses AES-256-GCM, with a key derived from your passphrase (PBKDF2-SHA256, 600,000 rounds) that is never stored.
+- **The QR codes could not be scanned back.** The hand-written encoder skipped alignment patterns and cut data off at about 62 bytes. Backups now use a standard QR library, a Base45 encoding sized for QR, and a checksum on every set. Old `F|…` text fragments still import.
+- **Compression could fall back silently.** If the browser lacked Compression Streams, it returned the input unchanged and still reported success. It now says so.
+- **Bonsai's "remembers pods" was only in the prompt.** Recent pods are now sent to the model when memory is on.
+- **Several features were scripted.** The GCP deploy log, the kernel process list, the foam bubbles and the boot hardware ("Quantum Foam QF-9000", "64 ZB") are now real measurements. The boot screen probes this device; Kernel Monitor shows your open windows and live metrics.
 
-The `--scope` is optional; omit it to use the linked project's team. The script needs the `vercel` CLI, `node`, `pnpm`, and `openssl`. Prefer to do it by hand? Follow the sequential steps below, or the full [Setup and Deployment](docs/setup-and-deploy.md) guide.
+Your writing is kept as starter files: the theory notes, the master prompt (it is encrypted when you set up the vault), and the three brutal/beautiful entries.
 
-## Getting Started
+## Keeping your data safe
 
-For the full local setup, storage provisioning, Sign in with Vercel credentials, and production deploy flow, see [Setup and Deployment](docs/setup-and-deploy.md). For the runtime architecture, streaming model, persistence flow, and extension points, see [How the Chatbot Works](docs/how-the-chatbot-works.md).
+Everything lives in this browser's IndexedDB on this device. That gives you privacy, but it also means:
 
-Install dependencies with pnpm:
+1. **Back up.** Memory Map → *Export full backup* gives you a JSON file with a fingerprint. Restoring checks the file has not been modified.
+2. **Make storage persistent.** Kernel Monitor → *Make storage persistent* asks the browser not to evict your data. On iPhone, add the app to your Home Screen first: Safari can clear storage for sites you have not visited recently, but installed apps are much safer.
+3. **Do not forget your vault passphrase.** There is no recovery.
 
-```bash
-pnpm install
-```
+**What the vault protects:** files at rest on the device and inside backups, including their names. **What it does not:** a compromised or malware-infected device while the vault is unlocked, or a weak passphrase.
 
-Link the Vercel project and pull environment variables:
+## Running Bonsai (your local AI)
 
-```bash
-vercel link
-```
+1. Install [Ollama](https://ollama.com).
+2. Create the Bonsai model: `ollama create bonsai -f bridge/Modelfile` (based on `llama3.2:3b`). Or pick any installed model in the app.
+3. Start the bridge in front of Ollama:
+   ```bash
+   BONSAI_KEY=$(openssl rand -hex 16) npm run bridge
+   ```
+   The bridge (`bridge/bonsai-bridge.mjs`, no dependencies) listens on `127.0.0.1:11435` and requires the key in an `X-Bonsai-Key` header. It answers the browser's CORS checks, so you do not need to set `OLLAMA_ORIGINS`, and it only exposes the chat endpoints.
+4. In Bonsai.exe, set the endpoint to `http://localhost:11435` and paste the key.
 
-Provision storage with the [Vercel CLI integration commands](https://vercel.com/docs/cli/integration):
-
-```bash
-# Required: persisted chat, auth, eve session state, and message snapshots
-vercel integration add neon
-
-# Required: Redis-backed rate limiting
-vercel integration add upstash
-```
-
-Follow the prompts to connect each resource to the linked project. Then pull the generated environment variables locally:
-
-```bash
-vercel env pull .env.local --yes
-```
-
-Required environment variables:
-
-```bash
-DATABASE_URL=
-BETTER_AUTH_SECRET=
-NEXT_PUBLIC_VERCEL_APP_CLIENT_ID=
-VERCEL_APP_CLIENT_SECRET=
-UPSTASH_REDIS_REST_URL=
-UPSTASH_REDIS_REST_TOKEN=
-KV_REST_API_URL=
-KV_REST_API_TOKEN=
-```
-
-Optional environment variables:
+**From your phone:** an https page cannot call a plain `http://` address on your network, so put the bridge behind an https tunnel:
 
 ```bash
-# Override the app origin for custom production domains.
-BETTER_AUTH_URL=
-
-# Enable hosted Vercel Connect integrations.
-SLACK_CONNECTOR=
-LINEAR_CONNECTOR=
-NOTION_CONNECTOR=
-SENTRY_CONNECTOR=
+cloudflared tunnel --url http://localhost:11435
 ```
 
-Create optional Vercel Connect integrations:
+Then paste the `https://….trycloudflare.com` URL and your key into Bonsai on the phone. Always use a key when the bridge is reachable from outside your computer; the bridge refuses to start on a network address without one.
+
+Bridge settings: `BONSAI_PORT` (11435), `BONSAI_HOST` (127.0.0.1), `OLLAMA_URL` (http://127.0.0.1:11434), and `BONSAI_ORIGINS` (comma-separated, default `*`).
+
+## Develop
+
+Requires Node 20.19+.
 
 ```bash
-# Slack channel
-vercel connect create slack --name eve-chat-template --triggers
-vercel connect attach <slack-connector-uid> --triggers --trigger-path /eve/v1/slack --yes
-
-# MCP connections
-vercel connect create mcp.notion.com --name notion
-vercel connect create https://mcp.linear.app/mcp --name linear
-vercel connect create https://mcp.sentry.dev/mcp --name sentry
+npm install
+npm run dev        # http://localhost:5173
+npm run check      # lint + typecheck + tests + production build (what CI runs)
 ```
 
-The deploy button does not require these integrations. For manual setup, put the returned connector UIDs in `SLACK_CONNECTOR`, `NOTION_CONNECTOR`, `LINEAR_CONNECTOR`, and `SENTRY_CONNECTOR`. Local development falls back to `slack/eve-chat-template`, `notion`, `linear`, and `sentry`, so connectors created with the names above work without editing `agent/`.
+The project is React 19, TypeScript, Vite and Tailwind CSS 4, plus Vitest with `fake-indexeddb`. The service worker comes from `vite-plugin-pwa`.
 
-If the connector is not attached to the linked project, run:
-
-```bash
-vercel connect attach <connector-uid> --yes
-vercel env pull .env.local
+```
+src/lib/       storage, crypto, compression, backup, shell, Ollama client (unit-tested)
+src/os/        boot, window manager, desktop, launcher, PWA state
+src/programs/  the 13 programs (each loaded on demand)
+src/ui/        shared components and QR helpers
+bridge/        Bonsai bridge proxy, its tests, and the Ollama Modelfile
 ```
 
-Create the database tables:
+## Deploy
 
-```bash
-pnpm db:migrate
-```
+It is a static site: `npm run build` writes `dist/`. Any static host works. On Vercel, `vercel.json` pins the Vite build and output folder, so an existing project from the old template deploys without changing settings. The build records the commit it came from, and Build Center shows it. Set `VITE_REPO_URL` to make the commit link point at your repository.
 
-For production, run migrations with Vercel production env vars:
-
-```bash
-vercel env run -e production -- pnpm db:migrate
-```
-
-Start the development server:
-
-```bash
-pnpm dev
-```
-
-## What Is Included
-
-- Text chat with an eve agent through same-origin `/eve/v1/*` routes
-- Better Auth sign-in with Vercel
-- Mandatory Neon-backed chat history
-- Mandatory Upstash Redis rate limiting for authenticated chat sends
-- Drizzle schema and migrations under `lib/db`
-- Saved eve session cursors and event snapshots
-- Sidebar history with delete and new-chat actions
-- Vercel Connect-backed Notion, Linear, and Sentry MCP connections
-- Vercel Connect-backed Slack channel route at `/eve/v1/slack`
-- Composer-level connections menu
-- First-message chat titles derived locally from the user's prompt
-- Streamdown markdown rendering for assistant text and reasoning
-- shadcn/Tailwind components for messages, tools, HITL prompts, and composer
-
-This template intentionally does not include file uploads, Vercel Blob, guest mode, NextAuth/Auth.js, or AI Elements.
-
-## Agent Code
-
-Edit the agent in `agent/agent.ts`. Its behavior is defined in `agent/instructions.md`, and tools live in `agent/tools/`.
-
-The browser talks to eve with `useEveAgent()` from `eve/react`; the app stores eve stream events and session state so `/chat/[id]` can resume the same durable conversation after refresh.
+Deploying only changes the app. Your files stay on each device.
