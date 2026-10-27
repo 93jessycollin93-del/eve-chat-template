@@ -1,16 +1,13 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "experimentalServices": {
-    "web": {
-      "entrypoint": ".",
-      "framework": "nextjs",
-      "routePrefix": "/"
-    },
-    "eve": {
-      "buildCommand": "eve build",
-      "entrypoint": ".",
-      "framework": "eve",
-      "routePrefix": "/_eve_internal/eve"
+  "framework": "vite",
+  "installCommand": "npm ci",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "headers": [
+    {
+      "source": "/sw.js",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
     }
-  }
+  ]
 }
